@@ -20,7 +20,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: ['https://your-frontend.onrender.com'], // Replace with your frontend Render URL
+  origin: ['https://delivery-vercel-mnkl.vercel.app/'], // Replace with your frontend Render URL
   credentials: true
 }));
 app.use(express.json());

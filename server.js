@@ -7,7 +7,6 @@ const http = require('http');
 // Load environment variables
 dotenv.config();
 
-// Import routes
 const userRoutes = require('./routes/userRoutes');
 const partnerRoutes = require('./routes/partnerRoutes');
 const orderRoutes = require('./routes/orderRoutes');
@@ -21,20 +20,23 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Root route handler to fix "Cannot GET /"
+// Root route handler (health check)
 app.get('/', (req, res) => {
   res.send('Server is running');
 });
 
-// MongoDB connection
+// Use MONGO_URL (match this with your Render env variable)
 const mongoURI =
-  process.env.MONGODB_URL ||
+  process.env.MONGO_URL ||
   'mongodb+srv://gvanshika528:12345@cluster0.n8byyoh.mongodb.net/goodsDB?retryWrites=true&w=majority&appName=Cluster0';
 
 mongoose
   .connect(mongoURI)
   .then(() => console.log('✅ Connected to MongoDB'))
-  .catch((err) => console.error('❌ MongoDB connection error:', err.message));
+  .catch((err) => {
+    console.error('❌ MongoDB connection error:', err.message);
+    process.exit(1); // Exit if DB connection fails
+  });
 
 // Routes
 app.use('/api/users', userRoutes);
@@ -60,12 +62,11 @@ io.on('connection', (socket) => {
   console.log('A user connected');
 
   socket.on('driverLocation', (data) => {
-    // Broadcast driver location to all clients (or specific customer)
     socket.broadcast.emit('updateDriverLocation', data);
   });
 });
 
-// Start server
+// Use Render’s assigned port or fallback to 5000 locally
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);

@@ -3,12 +3,11 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const http = require('http');
-const path = require('path');
+const socketIO = require('socket.io');
 
 // Load environment variables
 dotenv.config();
 
-// Import routes
 const userRoutes = require('./routes/userRoutes');
 const partnerRoutes = require('./routes/partnerRoutes');
 const orderRoutes = require('./routes/orderRoutes');
@@ -20,31 +19,28 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: ['https://delivery-vercel-mnkl.vercel.app/'], // Replace with your frontend Render URL
+  origin: 'https://delivery-vercel-mnkl.vercel.app',
   credentials: true
 }));
 app.use(express.json());
 
-// Root route handler (health check)
-app.get('/api/health', (req, res) => {
-  res.send('✅ Server is up and running');
+// Root route
+app.get('/', (req, res) => {
+  res.send('✅ Backend is live on Render');
 });
 
 // MongoDB connection
 const mongoURI = process.env.MONGO_URL;
 
 mongoose
-  .connect(mongoURI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-  })
+  .connect(mongoURI)
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch((err) => {
     console.error('❌ MongoDB connection error:', err.message);
     process.exit(1);
   });
 
-// Routes
+// API routes
 app.use('/api/users', userRoutes);
 app.use('/api/partners', partnerRoutes);
 app.use('/api/dl', dlRoutes);
@@ -52,38 +48,27 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/goods', goodsRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Global error handler
+// Error handler
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ message: 'Something went wrong on the server!' });
 });
 
-// Serve frontend build (optional if deploying frontend separately)
-app.use(express.static(path.join(__dirname, 'client/build')));
-
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
-});
-
-// Create HTTP server
+// Socket.IO setup
 const server = http.createServer(app);
-
-// Initialize Socket.IO
-const io = require('socket.io')(server, {
-  cors: {
-    origin: '*',
-  }
+const io = socketIO(server, {
+  cors: { origin: '*' }
 });
 
 io.on('connection', (socket) => {
-  console.log('🟢 A user connected');
+  console.log('A user connected');
 
   socket.on('driverLocation', (data) => {
     socket.broadcast.emit('updateDriverLocation', data);
   });
 
   socket.on('disconnect', () => {
-    console.log('🔴 A user disconnected');
+    console.log('A user disconnected');
   });
 });
 

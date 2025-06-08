@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Order = require('../models/Order');
+const Order = require('../Models/Order');
 const { auth } = require('../middleware/auth');
 const {Auth}= require('../Middlewares/auth')
 // Create a new order

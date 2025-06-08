@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const http = require('http');
+
 // Load environment variables
 dotenv.config();
 
@@ -12,22 +13,28 @@ const partnerRoutes = require('./routes/partnerRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const goodsRoutes = require('./routes/goodsRoutes');
-const dlRoutes= require('./routes/dlroutes')
+const dlRoutes = require('./routes/dlroutes');
+
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// MongoDB connection
-const mongoURI = process.env.MONGODB_URL || "mongodb+srv://gvanshika528:12345@cluster0.n8byyoh.mongodb.net/goodsDB?retryWrites=true&w=majority&appName=Cluster0";
+// Root route handler to fix "Cannot GET /"
+app.get('/', (req, res) => {
+  res.send('Server is running');
+});
 
-mongoose.connect(mongoURI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log('✅ Connected to MongoDB'))
-.catch(err => console.error('❌ MongoDB connection error:', err.message));
+// MongoDB connection
+const mongoURI =
+  process.env.MONGODB_URL ||
+  'mongodb+srv://gvanshika528:12345@cluster0.n8byyoh.mongodb.net/goodsDB?retryWrites=true&w=majority&appName=Cluster0';
+
+mongoose
+  .connect(mongoURI)
+  .then(() => console.log('✅ Connected to MongoDB'))
+  .catch((err) => console.error('❌ MongoDB connection error:', err.message));
 
 // Routes
 app.use('/api/users', userRoutes);
@@ -42,17 +49,18 @@ app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ message: 'Something went wrong on the server!' });
 });
-// server.js
+
+// Create HTTP server and initialize socket.io
 const server = http.createServer(app);
 const io = require('socket.io')(server, {
-  cors: { origin: "*" }
+  cors: { origin: '*' },
 });
 
 io.on('connection', (socket) => {
   console.log('A user connected');
 
   socket.on('driverLocation', (data) => {
-    // broadcast driver location to all clients (or specific customer)
+    // Broadcast driver location to all clients (or specific customer)
     socket.broadcast.emit('updateDriverLocation', data);
   });
 });

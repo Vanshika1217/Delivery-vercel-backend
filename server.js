@@ -3,10 +3,12 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const http = require('http');
+const path = require('path');
 
 // Load environment variables
 dotenv.config();
 
+// Import routes
 const userRoutes = require('./routes/userRoutes');
 const partnerRoutes = require('./routes/partnerRoutes');
 const orderRoutes = require('./routes/orderRoutes');
@@ -17,25 +19,29 @@ const dlRoutes = require('./routes/dlroutes');
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['https://your-frontend.onrender.com'], // Replace with your frontend Render URL
+  credentials: true
+}));
 app.use(express.json());
 
 // Root route handler (health check)
-app.get('/', (req, res) => {
-  res.send('Server is running');
+app.get('/api/health', (req, res) => {
+  res.send('✅ Server is up and running');
 });
 
-// Use MONGO_URL (match this with your Render env variable)
-const mongoURI =
-  process.env.MONGO_URL ||
-  'mongodb+srv://gvanshika528:12345@cluster0.n8byyoh.mongodb.net/goodsDB?retryWrites=true&w=majority&appName=Cluster0';
+// MongoDB connection
+const mongoURI = process.env.MONGO_URL;
 
 mongoose
-  .connect(mongoURI)
+  .connect(mongoURI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  })
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch((err) => {
     console.error('❌ MongoDB connection error:', err.message);
-    process.exit(1); // Exit if DB connection fails
+    process.exit(1);
   });
 
 // Routes
@@ -52,21 +58,36 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Something went wrong on the server!' });
 });
 
-// Create HTTP server and initialize socket.io
+// Serve frontend build (optional if deploying frontend separately)
+app.use(express.static(path.join(__dirname, 'client/build')));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+});
+
+// Create HTTP server
 const server = http.createServer(app);
+
+// Initialize Socket.IO
 const io = require('socket.io')(server, {
-  cors: { origin: '*' },
+  cors: {
+    origin: '*',
+  }
 });
 
 io.on('connection', (socket) => {
-  console.log('A user connected');
+  console.log('🟢 A user connected');
 
   socket.on('driverLocation', (data) => {
     socket.broadcast.emit('updateDriverLocation', data);
   });
+
+  socket.on('disconnect', () => {
+    console.log('🔴 A user disconnected');
+  });
 });
 
-// Use Render’s assigned port or fallback to 5000 locally
+// Start server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
